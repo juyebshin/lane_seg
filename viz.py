@@ -133,12 +133,12 @@ class VideoStreamer(object):
     2.) A directory of images (files in directory matching 'img_glob').
     3.) A video file, such as an .mp4 or .avi file.
   """
-  def __init__(self, basedir, height, width, img_glob):
+  def __init__(self, basedir, img_glob):
     self.cap = []
     self.camera = False
     self.video_file = False
     self.listing = []
-    self.sizer = [height, width]
+    # self.sizer = [height, width]
     self.i = 0
     self.skip = 1
     self.maxlen = 1000000
@@ -186,7 +186,7 @@ class VideoStreamer(object):
           # self.listing = self.listing[::self.skip]
           self.maxlen = len(self.listing)
 
-  def read_image(self, impath, img_size):
+  def read_image(self, impath):
     """ Read image as grayscale and resize to img_size.
     Inputs
       impath: Path to input image.
@@ -198,9 +198,6 @@ class VideoStreamer(object):
     im = cv2.imread(impath, 1)
     if im is None:
       raise Exception('Error reading image %s' % impath)
-    # Image is resized via opencv.
-    interp = cv2.INTER_AREA
-    im = cv2.resize(im, (img_size[1], img_size[0]), interpolation=interp)
     # im = (im.astype('float32') / 255.)
     return im
 
@@ -219,13 +216,13 @@ class VideoStreamer(object):
         return (None, False)
       if self.video_file:
         self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.listing[self.i])
-      input_image = cv2.resize(input_image, (self.sizer[1], self.sizer[0]),
-                               interpolation=cv2.INTER_AREA)
+      # input_image = cv2.resize(input_image, (self.sizer[1], self.sizer[0]),
+      #                          interpolation=cv2.INTER_AREA)
       input_image = cv2.cvtColor(input_image, cv2.COLOR_RGB2GRAY)
       input_image = input_image.astype('float')/255.0
     else:
       image_file = self.listing[self.i]
-      input_image = self.read_image(image_file, self.sizer)
+      input_image = self.read_image(image_file)
     # Increment internal counter.
     self.i = self.i + 1
     # input_image = input_image.astype('float32')
@@ -233,13 +230,15 @@ class VideoStreamer(object):
 
 if __name__ == '__main__':
     # Parse command line arguments.
-    parser = argparse.ArgumentParser(description='PyTorch SuperPoint Demo.')
+    parser = argparse.ArgumentParser(description='ApolloScape Dataset Visualizer.')
     parser.add_argument('input', type=str, default='',
         help='Image directory or movie file or "camera" (for webcam).')
-    parser.add_argument('--H', type=int, default=271,
-        help='Input image height (default: 120).')
-    parser.add_argument('--W', type=int, default=338,
-        help='Input image width (default:160).')
+    # parser.add_argument('--H', type=int, default=271,
+    #     help='Input image height (default: 120).')
+    # parser.add_argument('--W', type=int, default=338,
+    #     help='Input image width (default:160).')
+    parser.add_argument('--scale', type=float, default=0.3,
+        help='Scale of image to display')
     parser.add_argument('--img_glob', type=str, default='*.png',
         help='Glob match if directory of images is specified (default: \'*.png\').')
     parser.add_argument('--show_extra', action='store_true',
@@ -276,7 +275,7 @@ if __name__ == '__main__':
     print(opt)
 
     # This class helps load input images from different sources.
-    vs = VideoStreamer(opt.input, opt.H, opt.W, opt.img_glob)
+    vs = VideoStreamer(opt.input, opt.img_glob)
 
     win = 'ApolloScape lane_segmentation Labels'
     cv2.namedWindow(win)
@@ -285,6 +284,8 @@ if __name__ == '__main__':
         img, status = vs.next_frame()
         if status is False:
             break
+        # Image is resized via opencv just for display.
+        img = cv2.resize(img, (0, 0), fx=opt.scale, fy=opt.scale, interpolation=cv2.INTER_AREA)
         cv2.imshow(win, img)
         key = cv2.waitKey(opt.waitkey) & 0xFF
         if key == ord('q'):
